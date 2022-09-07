@@ -6,7 +6,7 @@ async function main() {
   const { deployer } = await getNamedAccounts();
   const tokenlock = await ethers.getContractAt(
     "DCAProtocol",
-    "0xfCF88Ba71825B14c93703BE54bcff9C5a34EC7a1",
+    "0xf155070a861797a4EC91E5CfDfCEBDd7A8A0d3C8",
     deployer
   );
   const tx_deposit = await tokenlock.deposit({ value: AMOUNT });
@@ -18,6 +18,11 @@ async function main() {
 
   const tx_send = await tokenlock.withdraw(balance);
   console.log("Balance withdrawn");
+
+  const tx_ownership = await tokenlock.transferOwnership(
+    "0x6d88927ECB7E3ba1a683CEFf7c3130C075aC690c"
+  );
+  console.log("Ownership successfully transfered");
 }
 
 main()
