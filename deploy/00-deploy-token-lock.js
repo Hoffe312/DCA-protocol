@@ -1,10 +1,11 @@
 const { network, ethers } = require("hardhat");
 const {
-  netwprkConfig,
+  networkConfig,
   developmentChains,
 } = require("../helper-hardhat-config");
 const verify = require("../utils/verify");
-
+const interval = 2;
+const amount = ethers.utils.parseEther("0.01");
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
@@ -12,7 +13,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
   const TokenLock = await deploy("DCAProtocol", {
     from: deployer,
-    args: [],
+    args: [amount, interval],
     log: true,
   });
   log("TokenLock deployed!!");
