@@ -8,7 +8,7 @@ This is to maximize the risk reward ratio.
 
 0.step: actually starting and writing a small README.md :heavy_check_mark:
 
-1.step: time lock/release (including testing)
+1.step: time lock/release (including testing) :heavy_check_mark:
 
 2.step: reactjs frontend to change variables
 
