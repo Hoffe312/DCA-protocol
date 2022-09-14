@@ -3,6 +3,7 @@ require("@nomiclabs/hardhat-etherscan");
 require("hardhat-deploy");
 require("solidity-coverage");
 require("hardhat-gas-reporter");
+require("@nomiclabs/hardhat-solhint");
 require("hardhat-contract-sizer");
 require("dotenv").config();
 const RINKEBY_RPC_URL = process.env.RINKEBY_RPC_URL || "";
