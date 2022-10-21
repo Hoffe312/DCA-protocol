@@ -16,5 +16,6 @@ const networkConfig = {
 };
 
 const developmentChains = ["hardhat", "localhost"];
+const contractAddress = "./deployments/goerli/DCAProtocol.json";
 
 module.exports = { networkConfig, developmentChains };

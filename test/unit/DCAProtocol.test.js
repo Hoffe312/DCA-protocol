@@ -16,6 +16,11 @@ const {
         amount,
         signer;
 
+      const usdcAddr = "0x07865c6E87B9F70255377e024ace6630C1Eaa37F";
+      const wethAddr = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+      const daiAddr = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+      const AMOUNT = ethers.utils.parseEther("1");
+
       beforeEach(async () => {
         accounts = await ethers.getSigners();
         signer = accounts[0];
@@ -26,7 +31,10 @@ const {
         tokenlockSigner = tokenlockContract.connect(accounts[0]);
         interval = await tokenlock.getInterval();
         amount = await tokenlock.getAmount();
-        depositAmount = ethers.utils.parseEther("0.1");
+        weth = await ethers.getContractAt("IWETH", wethAddr);
+        dai = await ethers.getContractAt("IERC20", daiAddr);
+        usdc = await ethers.getContractAt("IERC20", usdcAddr);
+        await weth.deposit({ value: AMOUNT });
       });
 
       describe("constructor", function () {
@@ -36,35 +44,62 @@ const {
         });
       });
 
-      describe("deposit", function () {
-        it("records user when he deposits", async () => {
-          await tokenlock.deposit({ value: depositAmount });
-          const contractUser = await tokenlock.getUser(0);
-          assert.equal(contractUser, user.address);
-        });
-        it("mapping of user address to funds", async () => {
-          await tokenlock.deposit({ value: depositAmount });
-          const contractUser = await tokenlock.getUser(0);
-          const balanceMapping = await tokenlock.balances(contractUser);
-          assert.equal(balanceMapping.toString(), depositAmount.toString());
-        });
-        it("without deposit there is no timestamp", async () => {
+      describe("Funds", function () {
+        it("without depositFunds there is no timestamp", async () => {
           const lastTimeStamp = await tokenlock.getLastTimeStamp();
           assert.equal(0, lastTimeStamp);
         });
-        it("sets the timettamp correctly", async () => {
-          await tokenlock.deposit({ value: depositAmount });
+
+        it("sets the timestamp correctly", async () => {
+          await weth.approve(tokenlock.address, AMOUNT);
+          const tx = await tokenlock.depositFunds(wethAddr, AMOUNT);
+          await tx.wait(1);
           const lastTimeStamp = await tokenlock.getLastTimeStamp();
           assert.isFalse(lastTimeStamp.toString() == "0");
         });
+
+        it("deposits funds correctly", async () => {
+          await weth.approve(tokenlock.address, AMOUNT);
+          const depositFundsTx = await tokenlock.depositFunds(wethAddr, AMOUNT);
+          await depositFundsTx.wait(1);
+
+          assert.equal(
+            (await tokenlock.getFunds()).toString(),
+            AMOUNT.toString()
+          );
+        });
       });
+      describe("Swap", function () {
+        it("gets AmountOutMin", async () => {
+          const amountOutMin = await tokenlock.getAmountOutMin(
+            wethAddr,
+            daiAddr,
+            AMOUNT
+          );
+          assert(amountOutMin > 0);
+        });
+        it("Swaps Weth to Usdc", async () => {
+          const tx_deposit = await tokenlock.depositFunds(wethAddr, AMOUNT);
+          await tx_deposit.wait(1);
+          const amountOutMin = await tokenlock.getAmountOutMin(
+            wethAddr,
+            daiAddr,
+            AMOUNT
+          );
+          const tx_swap = await tokenlock.swap(wethAddr, daiAddr, AMOUNT, 0);
+          await tx_swap.wait(1);
+
+          console.log("DAI balance", await dai.balanceOf(signer.address));
+        });
+      });
+
       describe("checkUpkeep", function () {
         it("returns false if there is no balance and no timestamp", async () => {
           const { upkeepNeeded } = await tokenlock.callStatic.checkUpkeep("0x");
           assert(!upkeepNeeded);
         });
         it("returns true if timePassed and hasPlayers is true", async () => {
-          await tokenlockSigner.deposit({ value: depositAmount });
+          await tokenlockSigner.depositFunds(wethAddr, AMOUNT);
           await network.provider.send("evm_increaseTime", [
             interval.toNumber() + 1,
           ]);
@@ -73,12 +108,13 @@ const {
           assert(upkeepNeeded);
         });
       });
+
       describe("performUpkeep", function () {
         it("can only run if checkUpkeep is true", async () => {
           expect(tokenlock.performUpkeep("0x")).to.be.reverted;
         });
         it("performs upkeep if upkeepneeded is true", async () => {
-          await tokenlock.deposit({ value: depositAmount });
+          await tokenlock.depositFunds(wethAddr, AMOUNT);
           await network.provider.send("evm_increaseTime", [
             interval.toNumber() + 1,
           ]);
@@ -87,7 +123,7 @@ const {
           assert(tx);
         });
         it("sets the lastTimeStamp new", async () => {
-          await tokenlock.deposit({ value: depositAmount });
+          await tokenlock.depositFunds(wethAddr, AMOUNT);
           const firstTimeStamp =
             (await tokenlock.getLastTimeStamp()).toNumber() +
             interval.toNumber() +
@@ -101,8 +137,9 @@ const {
           const lastTimeStamp = (await tokenlock.getLastTimeStamp()).toNumber();
           assert.equal(firstTimeStamp, lastTimeStamp);
         });
+        /** 
         it("calls the withdraw function", async () => {
-          await tokenlockSigner.deposit({ value: depositAmount });
+          await tokenlockSigner.depositFunds(wethAddr, AMOUNT);
           const firstBalance = await accounts[0].getBalance();
           await network.provider.send("evm_increaseTime", [
             interval.toNumber() + 1,
@@ -111,7 +148,7 @@ const {
           await tokenlockSigner.performUpkeep("0x");
           const finalBalance = await accounts[0].getBalance();
           expect(firstBalance).to.below(finalBalance);
-        });
+        });*/
       });
       describe("change functions", function () {
         //reverts because tokenlockSigner is account[0] == owner,  tokenlock is account[1] != owner
